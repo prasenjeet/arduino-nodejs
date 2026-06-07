@@ -1,0 +1,23 @@
+{
+  "name": "arduino-nodejs",
+  "version": "1.0.0",
+  "description": "Node.js project to connect and communicate with Arduino Uno over serial port",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "list-ports": "node src/list-ports.js",
+    "blink": "node src/examples/blink.js",
+    "sensor": "node src/examples/read-sensor.js"
+  },
+  "dependencies": {
+    "serialport": "^12.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "keywords": ["arduino", "serial", "nodejs", "uno"],
+  "license": "MIT"
+}
