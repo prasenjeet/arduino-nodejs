@@ -5,11 +5,14 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
+    "server": "node src/server.js",
     "list-ports": "node src/list-ports.js",
     "blink": "node src/examples/blink.js",
+    "led-buzzer": "node src/examples/led-buzzer.js",
     "sensor": "node src/examples/read-sensor.js"
   },
   "dependencies": {
+    "express": "^5.2.1",
     "serialport": "^12.0.0"
   },
   "devDependencies": {
@@ -18,6 +21,11 @@
   "engines": {
     "node": ">=16.0.0"
   },
-  "keywords": ["arduino", "serial", "nodejs", "uno"],
+  "keywords": [
+    "arduino",
+    "serial",
+    "nodejs",
+    "uno"
+  ],
   "license": "MIT"
 }

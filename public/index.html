@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Arduino Control</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      flex-wrap: wrap;
+      padding: 40px 20px;
+    }
+
+    .card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 36px;
+      width: 480px;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+    }
+
+    .card-icon {
+      font-size: 2rem;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #f1f5f9;
+      margin-bottom: 4px;
+    }
+
+    .subtitle {
+      font-size: 0.8rem;
+      color: #64748b;
+      margin-bottom: 24px;
+    }
+
+    .wiring {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: 20px;
+      font-size: 0.75rem;
+      color: #64748b;
+      line-height: 1.7;
+    }
+
+    .wiring strong { color: #94a3b8; }
+
+    .indicator {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: #334155;
+      transition: background 0.3s;
+      flex-shrink: 0;
+    }
+
+    .dot.on {
+      background: #22c55e;
+      box-shadow: 0 0 8px #22c55e;
+      animation: pulse 1s ease-in-out infinite;
+    }
+
+    .dot.on.amber {
+      background: #f59e0b;
+      box-shadow: 0 0 8px #f59e0b;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .status-text { font-size: 0.85rem; color: #94a3b8; }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    button {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    button:active { transform: scale(0.97); }
+    button:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+    .btn-start { background: #22c55e; color: #fff; }
+    .btn-stop  { background: #ef4444; color: #fff; }
+    .btn-start.amber { background: #f59e0b; }
+
+    .log-box {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 14px;
+      height: 210px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 0.78rem;
+      line-height: 1.6;
+    }
+
+    .log-box::-webkit-scrollbar { width: 5px; }
+    .log-box::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+
+    .log-entry         { color: #94a3b8; }
+    .log-entry.sent    { color: #38bdf8; }
+    .log-entry.received{ color: #22c55e; }
+    .log-entry.error   { color: #f87171; }
+    .log-entry.meta    { color: #64748b; font-style: italic; }
+  </style>
+</head>
+<body>
+
+  <!-- ── Blink card ── -->
+  <div class="card">
+    <div class="card-icon">💡</div>
+    <h1>Built-in LED Blink</h1>
+    <p class="subtitle">Toggles the onboard LED on pin 13 — no extra wiring needed</p>
+
+    <div class="indicator">
+      <div class="dot" id="blinkDot"></div>
+      <span class="status-text" id="blinkStatus">Idle</span>
+    </div>
+
+    <div class="controls">
+      <button class="btn-start" id="blinkStart">Start Blink</button>
+      <button class="btn-stop"  id="blinkStop" disabled>Stop</button>
+    </div>
+
+    <div class="log-box" id="blinkLog"></div>
+  </div>
+
+  <!-- ── LED + Buzzer card ── -->
+  <div class="card">
+    <div class="card-icon">🔔</div>
+    <h1>External LED + Buzzer</h1>
+    <p class="subtitle">Blinks an external LED and plays alternating tones on a piezo buzzer</p>
+
+    <div class="wiring">
+      <strong>Wiring guide</strong><br>
+      LED &nbsp;&nbsp;: Anode → 220Ω → <strong>Pin 8</strong>, Cathode → GND<br>
+      Buzzer: Positive → <strong>Pin 9</strong>, Negative → GND
+    </div>
+
+    <div class="indicator">
+      <div class="dot amber" id="lbDot"></div>
+      <span class="status-text" id="lbStatus">Idle</span>
+    </div>
+
+    <div class="controls">
+      <button class="btn-start amber" id="lbStart">Start LED + Buzzer</button>
+      <button class="btn-stop"        id="lbStop" disabled>Stop</button>
+    </div>
+
+    <div class="log-box" id="lbLog"></div>
+  </div>
+
+  <script>
+    function makeController({ startBtn, stopBtn, dot, statusEl, logBox, statusUrl, startUrl, stopUrl, logsUrl }) {
+      let sse = null;
+
+      function appendLog(text) {
+        const el = document.createElement('div');
+        el.className = 'log-entry';
+        if (text.startsWith('Sent:'))        el.classList.add('sent');
+        else if (text.startsWith('Arduino >'))el.classList.add('received');
+        else if (text.startsWith('ERROR:'))   el.classList.add('error');
+        else if (text.startsWith('---') || text.startsWith('Connect')) el.classList.add('meta');
+        el.textContent = text;
+        logBox.appendChild(el);
+        logBox.scrollTop = logBox.scrollHeight;
+      }
+
+      function setRunning(running) {
+        dot.classList.toggle('on', running);
+        statusEl.textContent = running ? 'Running' : 'Idle';
+        startBtn.disabled = running;
+        stopBtn.disabled  = !running;
+      }
+
+      function connectSSE() {
+        if (sse) sse.close();
+        sse = new EventSource(logsUrl);
+        sse.onmessage = (e) => {
+          const msg = JSON.parse(e.data);
+          if (msg.type === 'status') setRunning(msg.running);
+          if (msg.type === 'log')    appendLog(msg.text);
+        };
+      }
+
+      startBtn.addEventListener('click', async () => {
+        startBtn.disabled = true;
+        connectSSE();
+        const res = await fetch(startUrl, { method: 'POST' });
+        if (!res.ok) {
+          const { error } = await res.json();
+          appendLog(`ERROR: ${error}`);
+          startBtn.disabled = false;
+        }
+      });
+
+      stopBtn.addEventListener('click', () => fetch(stopUrl, { method: 'POST' }));
+
+      fetch(statusUrl).then(r => r.json()).then(({ running }) => setRunning(running));
+      connectSSE();
+    }
+
+    makeController({
+      startBtn:  document.getElementById('blinkStart'),
+      stopBtn:   document.getElementById('blinkStop'),
+      dot:       document.getElementById('blinkDot'),
+      statusEl:  document.getElementById('blinkStatus'),
+      logBox:    document.getElementById('blinkLog'),
+      statusUrl: '/blink/status',
+      startUrl:  '/blink/start',
+      stopUrl:   '/blink/stop',
+      logsUrl:   '/blink/logs',
+    });
+
+    makeController({
+      startBtn:  document.getElementById('lbStart'),
+      stopBtn:   document.getElementById('lbStop'),
+      dot:       document.getElementById('lbDot'),
+      statusEl:  document.getElementById('lbStatus'),
+      logBox:    document.getElementById('lbLog'),
+      statusUrl: '/led-buzzer/status',
+      startUrl:  '/led-buzzer/start',
+      stopUrl:   '/led-buzzer/stop',
+      logsUrl:   '/led-buzzer/logs',
+    });
+  </script>
+</body>
+</html>
